@@ -10,11 +10,16 @@ VALIDATION_RATIO = 0.3
 
 
 def load_dataset():
-    log_file = os.path.join(DATA_PATH, 'driving_log.csv')
+    log_file_original = os.path.join(DATA_PATH, 'driving_log.csv')
+    log_file_centerDriving = os.path.join(DATA_PATH,'centerDriving','driving_log.csv')
+    log_file_recovery = os.path.join(DATA_PATH, 'recoveryLong', 'driving_log.csv')
     log_file_split = os.path.join(DATA_PATH, 'driving_log_split.csv')
 
-    if os.path.exists(log_file):
-        data = pd.read_csv(log_file)
+    if os.path.exists(log_file_centerDriving) and os.path.exists(log_file_recovery):
+        original = pd.read_csv(log_file_original)
+        centerDriving = pd.read_csv(log_file_centerDriving)
+        recovery = pd.read_csv(log_file_recovery)
+        data = centerDriving.append(recovery, ignore_index=True)
         n = len(data)
         print('\nDataset has {} samples'.format(n))
         # Reserve ratio of data for validation
@@ -26,7 +31,7 @@ def load_dataset():
 
 def count_data(batch_size):
     data = load_dataset()
-    valid_size = np.sum(data[VALIDATION_COLUMN] == 1)*0.05
+    valid_size = np.sum(data[VALIDATION_COLUMN] == 1)*0.09
     train_size = (int((len(data)-valid_size) * 0.1) // batch_size) * batch_size
     return train_size, valid_size
 
@@ -41,7 +46,7 @@ def load_image(file_path):
 def filter_steering(data, percentage=8, threshold = 0.5):
     #
     # Filtering % steering angles with delta above threshold
-    #    default is 70% of all angles less than 0.5
+    #    default is 70% of all angles greater than 0.5
     #
     rows = []
     delta = 0
@@ -163,7 +168,7 @@ def generate_train(batch_size=64, input_shape=(160, 320, 3)):
             #    with slight steering angle adjustment
             #    with horizontally flipped image
             random = np.random.randint(10)
-            if random < 8 and np.absolute(steering) > 0.20:
+            if random < 5 and np.absolute(steering) > 0.20:
                 img_left = load_image(data.loc[idx, 'left'])
                 img_right = load_image(data.loc[idx, 'right'])
                 i = add_side_image(x, y, steering, i, batch_size, img_left, img_right)

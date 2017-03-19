@@ -1,11 +1,5 @@
 #**Behavioral Cloning** 
 
-##Writeup Template
-
-###You can use this file as a template for your writeup if you want to submit it as a markdown file, but feel free to use some other method and submit a pdf if you prefer.
-
----
-
 **Behavioral Cloning Project**
 
 The goals / steps of this project are the following:
@@ -20,14 +14,14 @@ The goals / steps of this project are the following:
 
 [image1]: ./examples/CNN_Car-Behavioral.png "Model Visualization"
 [image2]: ./examples/center_2017_03_16_23_27_43_701.jpg "Center Lane Driving"
-[image3]: ./examples/center_start.png "Recovery Image Start"
-[image4]: ./examples/center_middle.png "Recovery Image Middle"
-[image5]: ./examples/center_end.png "Recovery Image End"
-[image6]: ./examples/center_original.png "Normal Image"
-[image7]: ./examples/center_flipped.png "Flipped Image"
-[image8]: ./examples/camera_center.png "Normal Center Camera Image"
-[image9]: ./examples/camera_left.png "Left Camera Image"
-[image10]: ./examples/camera_right.png "Right Camera Image"
+[image3]: ./examples/center_start.jpg "Recovery Image Start"
+[image4]: ./examples/center_middle.jpg "Recovery Image Middle"
+[image5]: ./examples/center_end.jpg "Recovery Image End"
+[image6]: ./examples/center_original.jpg "Normal Image"
+[image7]: ./examples/center_flipped.jpg "Flipped Image"
+[image8]: ./examples/camera_center.jpg "Normal Center Camera Image"
+[image9]: ./examples/camera_left.jpg "Left Camera Image"
+[image10]: ./examples/camera_right.jpg "Right Camera Image"
 
 ## Rubric Points
 ###Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
@@ -61,17 +55,17 @@ The data_io.py file contains the code for data input including: loading, normali
 My model consists of a convolution neural network inspired by the NVIDIA architecture described here, http://images.nvidia.com/content/tegra/automotive/images/2016/solutions/pdf/end-to-end-dl-using-px.pdf.
 It is an end-to-end model that have interspaced the layers in the NVIDIA design with Spatial Dropouts and a single Dropout (model.py lines 17-33)
 
-The model includes ReLU and ELU (Exponential Linear Unit) layers to introduce nonlinearity (model.py line 20), and the data is normalized in the after loading using simple arithmetics in (data_io.py line 39). 
+The model includes ReLU and ELU (Exponential Linear Unit) layers to introduce nonlinearity (see Final Model Architecture), and the data is normalized in the after loading using simple arithmetics in (data_io.py line 39). 
 
 ####2. Attempts to reduce overfitting in the model
 
 The model interlaces spatial dropout layers in between each original NVIDIA layer order to reduce overfitting (model.py even lines 20-26) as well as a single dropout after the full-connected layers. 
 
-The model was trained and validated on different data sets to ensure that the model was not overfitting (model.py lines 37-65 and data_io.py lines 12-24). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
+The model was trained and validated on different data sets to ensure that the model was not overfitting (model.py lines 37-65 and data_io.py lines 12-29). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
 ####3. Model parameter tuning
 
-The model used an Nadam optimizer, so the learning rate was not tuned manually (model.py line 25).
+The model used an Nadam optimizer, so the learning rate was not tuned manually (model.py line 44).
 
 ####4. Appropriate training data
 
@@ -91,7 +85,7 @@ In order to gauge how well the model was working, I split my image and steering 
 
 To combat the overfitting, I modified the model so I tried adding dropout layers using eithr ReLU or ELU. ELU is theoretically  superior due to its solution to the Vanishing gradient problem . However, in practice I found ReLU to work well in the convolutional layers while fully-connected layers behaviorally seemed to learn faster with ELU.
 
-The final model uses interlaced spatial dropout layers with ReLU in between each original convolutional NVIDIA layer. All spatial dropouts were set to be the same and found 0.2 to work well. To further address overfitting a Dropout layer of 0.5 was added prior to the fully-connected layers.
+The final model uses interlaced spatial dropout layers with ReLU in between each original convolutional NVIDIA layer. All spatial dropouts were set to be the same and found 0.2 to work well. To further address overfitting a Dropout layer of 0.5 was added after all the fully-connected layers.
 
 The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track. To improve the driving behavior in these cases, I created recovery data and augmented the data as explained in 3. Creation of the Training Set & Training Process.
 
@@ -126,29 +120,34 @@ To capture good driving behavior, I first recorded three laps on track one using
 
 ![alt text][image2]
 
-I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to recover after veering close to the edge of the lanes. These images show what a recovery looks like starting from ... :
-
-![alt text][image3]
-![alt text][image4]
+I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to recover after veering close to the edge of the lanes. These images show what a recovery looks like: <br />
+Recovery Start:<br />
+![alt text][image3]<br />
+Recovery Middle:<br />
+![alt text][image4]<br />
+Recovery Complete:<br />
 ![alt text][image5]
 
-To augment the trainng data sat, I also flipped images and angles thinking that this would reduce the bias of the training data created with images circling the track in the same direction. For example, here is an image that has then been flipped:
+To augment the traing data sat, I also flipped images and angles thinking that this would reduce the bias of the training data created with images circling the track in the same direction. For example, here is an image that has then been flipped:<br />
 
 ![alt text][image6]
 ![alt text][image7]
 
-To further augment the trainng data sat, I also used the left and right auxilliary camera images. 
+To further augment the trainng data sat, I also used the left and right auxilliary camera images (data_io.py lines 76-104). 
 
-For example, here is the center image along with it's left, right and their adjusted steering:
-
-![alt text][image8]
-![alt text][image9]
+For example, here is the center image along with it's left, right and their adjusted steering in a left turn:<br />
+Center:<br />
+![alt text][image8]<br />
+Left added with steering = center steering + _hard (0.15):<br />
+![alt text][image9]<br />
+Right added steering = center steering + _soft (-0.025):<br />
 ![alt text][image10]
+If the car was determined to be turning right instead augmented images would have mirrored parameters. I only augmented %40 of the training data and only when the absolute steering angle was larger than 0.2 (data_io.py line 171)
 
-In addition I also filtered out large changes in steering control.
+In addition I also filtered out 70% of images with large changes in steering control (data_io.py lines 46-65). Large changes is defined as a delta change in steering compared to previous which is greater than 0.5.
 
-After the collection process, I had X number of data points. I then preprocessed this data by simple arithmetics by "Normalization" (i.e. center around 0.5 and divide by 255)
+After the collection process, I had 5827 number of data points. I then preprocessed this data by simple arithmetics by "Normalization" (i.e. center around 0.5 and divide by 255)
 
 After initial loading I randomly shuffled the data set and put 30% of the data into a validation set (data_io.py line 109 and 140) leaving 70% for training. 
 
-The training data with augmentation was used to train the model. The validation, composed only of original images, set helped determine if the model was over or under fitting. The ideal number of epochs was 10 (suggested by the blog) as evidenced by inferior comparison of performance with a 25 epoch trained model. I used an Nadam optimizer so that manually training the learning rate wasn't necessary.
+The training data with augmentation was used to train the model. The validation, composed only of original images, set helped determine if the model was over or under fitting. The ideal number of epochs was 10 as evidenced by inferior comparison of performance with a 25 epoch trained model. I used an Nadam optimizer so that manually training the learning rate wasn't necessary.

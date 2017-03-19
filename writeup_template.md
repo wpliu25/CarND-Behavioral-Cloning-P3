@@ -126,23 +126,27 @@ To capture good driving behavior, I first recorded three laps on track one using
 
 ![alt text][image2]
 
-I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to recover after veering close to the edge of the lanes. These images show what a recovery looks like starting from ... :
-
-![alt text][image3]
-![alt text][image4]
+I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to recover after veering close to the edge of the lanes. These images show what a recovery looks like: <br />
+Recovery Start:<br />
+![alt text][image3]<br />
+Recovery Middle:<br />
+![alt text][image4]<br />
+Recovery Complete:<br />
 ![alt text][image5]
 
-To augment the trainng data sat, I also flipped images and angles thinking that this would reduce the bias of the training data created with images circling the track in the same direction. For example, here is an image that has then been flipped:
+To augment the trainng data sat, I also flipped images and angles thinking that this would reduce the bias of the training data created with images circling the track in the same direction. For example, here is an image that has then been flipped:<br />
 
 ![alt text][image6]
 ![alt text][image7]
 
 To further augment the trainng data sat, I also used the left and right auxilliary camera images. 
 
-For example, here is the center image along with it's left, right and their adjusted steering:
-
-![alt text][image8]
-![alt text][image9]
+For example, here is the center image along with it's left, right and their adjusted steering in a left turn:<br />
+Center:<br />
+![alt text][image8]<br />
+Left added with steering = center steering + _hard (0.15):<br />
+![alt text][image9]<br />
+Right added steering = center steering + _soft (-0.025):<br />
 ![alt text][image10]
 
 In addition I also filtered out large changes in steering control.

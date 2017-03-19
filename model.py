@@ -35,7 +35,7 @@ def nvidia_dropout_model(input_shape=(80, 160, 3)):
     return model
 
 def train(model_path='model.h5'):
-    epochs = 50
+    epochs = 10
     batch_size = 64
     input_shape = (160, 320, 3)
 

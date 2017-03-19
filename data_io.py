@@ -26,8 +26,8 @@ def load_dataset():
 
 def count_data(batch_size):
     data = load_dataset()
-    valid_size = np.sum(data[VALIDATION_COLUMN] == 1)*0.1
-    train_size = (int((len(data)-valid_size) * 0.9) // batch_size) * batch_size
+    valid_size = np.sum(data[VALIDATION_COLUMN] == 1)*0.05
+    train_size = (int((len(data)-valid_size) * 0.1) // batch_size) * batch_size
     return train_size, valid_size
 
 
@@ -70,31 +70,32 @@ def add_image(x, y, img, steering, i, flip=0):
 
 def add_side_image(x, y, steering, i, batch_size, img_left, img_right):
     # Augment with slight increase and decrease for left and right image
-    #   increase opposite direction camera
-    #   decrease current direction camera
-    _increase = 1.0
-    _decrease = 0.88
+    #   hard increase opposite direction camera
+    #   soft decrease current direction camera
+    #   add flip
+    _hard = 0.15
+    _soft = -0.025
 
     # left turn
     if steering < 0:
         if i < batch_size:
-            i = add_image(x, y, img_left, steering * _decrease, i)
+            i = add_image(x, y, img_left, steering + _soft, i)
         if i < batch_size:
-            i = add_image(x, y, img_left, steering * _decrease, i, 1)
+            i = add_image(x, y, img_left, steering + _soft, i, 1)
         if i < batch_size:
-            i = add_image(x, y, img_right, steering * _increase, i)
+            i = add_image(x, y, img_right, steering + _hard, i)
         if i < batch_size:
-            i = add_image(x, y, img_right, steering * _increase, i, 1)
+            i = add_image(x, y, img_right, steering + _hard, i, 1)
     # right turn
     else:
         if i < batch_size:
-            i = add_image(x, y, img_right, steering * _decrease, i)
+            i = add_image(x, y, img_right, steering + _soft, i)
         if i < batch_size:
-            i = add_image(x, y, img_right, steering * _decrease, i, 1)
+            i = add_image(x, y, img_right, steering + _soft, i, 1)
         if i < batch_size:
-            i = add_image(x, y, img_left, steering * _increase, i)
+            i = add_image(x, y, img_left, steering + _hard, i)
         if i < batch_size:
-            i = add_image(x, y, img_left, steering * _increase, i, 1)
+            i = add_image(x, y, img_left, steering + _hard, i, 1)
     return i
 
 def generate_valid(batch_size=64, input_shape=(160, 320, 3)):
@@ -161,8 +162,10 @@ def generate_train(batch_size=64, input_shape=(160, 320, 3)):
             # Augment with left and right image
             #    with slight steering angle adjustment
             #    with horizontally flipped image
-            img_left = load_image(data.loc[idx, 'left'])
-            img_right = load_image(data.loc[idx, 'right'])
-            i = add_side_image(x, y, steering, i, batch_size, img_left, img_right)
+            random = np.random.randint(10)
+            if random < 8 and np.absolute(steering) > 0.20:
+                img_left = load_image(data.loc[idx, 'left'])
+                img_right = load_image(data.loc[idx, 'right'])
+                i = add_side_image(x, y, steering, i, batch_size, img_left, img_right)
 
         yield x, y

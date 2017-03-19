@@ -26,15 +26,15 @@ def load_dataset():
 
 def count_data(batch_size):
     data = load_dataset()
-    valid_size = np.sum(data[VALIDATION_COLUMN] == 1)*0.05
-    train_size = (int((len(data)-valid_size) * 0.02) // batch_size) * batch_size
+    valid_size = np.sum(data[VALIDATION_COLUMN] == 1)*0.1
+    train_size = (int((len(data)-valid_size) * 0.9) // batch_size) * batch_size
     return train_size, valid_size
 
 
 def load_image(file_path):
     img = imread(os.path.join(DATA_PATH, file_path.strip()))
-    # Crop to 80, 160
-    img = imresize(img, (80, 160, 3))
+    # Crop to 80, 160 - replaced with Keras.Cropping2D
+    #img = imresize(img, (80, 160, 3))
     #Normalize
     return (img / 255.0-0.5)
 

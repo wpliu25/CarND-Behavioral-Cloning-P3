@@ -2,7 +2,7 @@ import argparse
 import os
 
 from keras.callbacks import ModelCheckpoint
-from keras.layers import Dense, Convolution2D, Flatten, Dropout, SpatialDropout2D
+from keras.layers import Dense, Convolution2D, Flatten, Dropout, SpatialDropout2D, Cropping2D
 from keras.models import Sequential
 from keras.optimizers import Nadam
 
@@ -15,7 +15,8 @@ from data_io import generate_train, generate_valid, count_data
 def nvidia_dropout_model(input_shape=(80, 160, 3)):
 
     model = Sequential()
-    model.add(Convolution2D(24, 5, 5,subsample=(2,2), activation="relu", input_shape=input_shape))
+    model.add(Cropping2D(cropping=((50, 20), (0, 0)), input_shape=input_shape))
+    model.add(Convolution2D(24, 5, 5,subsample=(2,2), activation="relu"))
     model.add(SpatialDropout2D(0.2))
     model.add(Convolution2D(36, 5, 5, subsample=(2, 2), activation="relu"))
     model.add(SpatialDropout2D(0.2))
@@ -34,9 +35,9 @@ def nvidia_dropout_model(input_shape=(80, 160, 3)):
     return model
 
 def train(model_path='model.h5'):
-    epochs = 10
+    epochs = 50
     batch_size = 64
-    input_shape = (80, 160, 3)
+    input_shape = (160, 320, 3)
 
     m = nvidia_dropout_model(input_shape=input_shape)
 

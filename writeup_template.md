@@ -20,14 +20,14 @@ The goals / steps of this project are the following:
 
 [image1]: ./examples/CNN_Car-Behavioral.png "Model Visualization"
 [image2]: ./examples/center_2017_03_16_23_27_43_701.jpg "Center Lane Driving"
-[image3]: ./examples/center_start.png "Recovery Image Start"
-[image4]: ./examples/center_middle.png "Recovery Image Middle"
-[image5]: ./examples/center_end.png "Recovery Image End"
-[image6]: ./examples/center_original.png "Normal Image"
-[image7]: ./examples/center_flipped.png "Flipped Image"
-[image8]: ./examples/camera_center.png "Normal Center Camera Image"
-[image9]: ./examples/camera_left.png "Left Camera Image"
-[image10]: ./examples/camera_right.png "Right Camera Image"
+[image3]: ./examples/center_start.jpg "Recovery Image Start"
+[image4]: ./examples/center_middle.jpg "Recovery Image Middle"
+[image5]: ./examples/center_end.jpg "Recovery Image End"
+[image6]: ./examples/center_original.jpg "Normal Image"
+[image7]: ./examples/center_flipped.jpg "Flipped Image"
+[image8]: ./examples/camera_center.jpg "Normal Center Camera Image"
+[image9]: ./examples/camera_left.jpg "Left Camera Image"
+[image10]: ./examples/camera_right.jpg "Right Camera Image"
 
 ## Rubric Points
 ###Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  

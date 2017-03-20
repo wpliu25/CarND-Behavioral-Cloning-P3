@@ -141,12 +141,12 @@ Center:<br />
 Left added with steering = center steering + _hard (0.15):<br />
 ![alt text][image9]<br />
 Right added steering = center steering + _soft (-0.025):<br />
-![alt text][image10]
+![alt text][image10]<br />
 If the car was determined to be turning right instead augmented images would have mirrored parameters. I only augmented %40 of the training data and only when the absolute steering angle was larger than 0.2 (data_io.py line 171)
 
 In addition I also filtered out 70% of images with large changes in steering control (data_io.py lines 46-65). Large changes is defined as a delta change in steering compared to previous which is greater than 0.5.
 
-After the collection process, I had 5827 number of data points. I then preprocessed this data by simple arithmetics by "Normalization" (i.e. center around 0.5 and divide by 255)
+After the collection process, I added 5827 images to the sample data, totalling 13863 number of data points. I then preprocessed this data by simple arithmetics by "Normalization" (i.e. center around 0.5 and divide by 255)
 
 After initial loading I randomly shuffled the data set and put 30% of the data into a validation set (data_io.py line 109 and 140) leaving 70% for training. 
 

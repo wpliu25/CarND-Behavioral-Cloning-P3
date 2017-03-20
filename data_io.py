@@ -8,7 +8,7 @@ import sklearn
 DATA_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
 VALIDATION_RATIO = 0.3
 
-def get_data(batch_size):
+def get_data(batch_size, epochs):
     # Load from file
     data = load_dataset()
 
@@ -19,7 +19,7 @@ def get_data(batch_size):
     train_samples, validation_samples = train_test_split(data, test_size=VALIDATION_RATIO)
 
     ratio = 0.1
-    return train_samples, validation_samples, len(train_samples)*ratio, len(validation_samples)*ratio
+    return train_samples, validation_samples, (len(train_samples)*2+len(train_samples)*4*0.9), len(validation_samples)#/batch_size, len(validation_samples)/epochs
 
 def load_dataset():
     log_file_original = os.path.join(DATA_PATH, 'driving_log.csv')
@@ -31,7 +31,7 @@ def load_dataset():
         original = pd.read_csv(log_file_original)
         centerDriving = pd.read_csv(log_file_centerDriving)
         recovery = pd.read_csv(log_file_recovery)
-        data = original.append(recovery, ignore_index=True)
+        data = original.append(centerDriving.append(recovery, ignore_index=True), ignore_index=True)
         n = len(data)
         print('\nDataset has {} samples'.format(n))
         data.to_csv(log_file_split, index=False)
@@ -160,7 +160,7 @@ def generate_train(data, batch_size=64, input_shape=(160, 320, 3)):
                 #    with slight steering angle adjustment
                 #    with horizontally flipped image
                 random = np.random.randint(10)
-                if random < 8 and np.absolute(steering) > 0.20:
+                if random < 9 and np.absolute(steering) > 0.20:
                     img_left = load_image(batch_samples.loc[idx, 'left'])
                     img_right = load_image(batch_samples.loc[idx, 'right'])
                     i = add_side_image(x, y, steering, i, batch_size, img_left, img_right)

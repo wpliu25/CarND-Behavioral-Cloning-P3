@@ -1,8 +1,8 @@
 import argparse
-import os
+import os, json
 
 from keras.callbacks import ModelCheckpoint
-from keras.layers import Dense, Convolution2D, Flatten, Dropout, SpatialDropout2D, Cropping2D
+from keras.layers import Dense, Conv2D, Flatten, Dropout, SpatialDropout2D, Cropping2D, Convolution2D
 from keras.models import Sequential
 from keras.optimizers import Nadam
 
@@ -35,7 +35,7 @@ def nvidia_dropout_model(input_shape=(80, 160, 3)):
     return model
 
 def train(model_path='model.h5'):
-    epochs = 3
+    epochs = 5
     batch_size = 64
     input_shape = (160, 320, 3)
 
@@ -44,9 +44,9 @@ def train(model_path='model.h5'):
     optimizer = Nadam()
     m.compile(loss='mean_squared_error', optimizer=optimizer, metrics=[])
 
-    train_samples, validation_samples, samples_per_epoch_training, samples_per_epoch_validation = get_data(batch_size)
-    print('Training size: %d, Validation size: %d'%(len(train_samples), len(validation_samples)))
-    print("----------------------------------------------------")
+    train_samples, validation_samples, samples_per_epoch_training, samples_per_epoch_validation = get_data(batch_size, epochs)
+    print('Training size: %d batches per epoch: %d, Validation size: %d batches per epoch: %d'%(len(train_samples), samples_per_epoch_training, len(validation_samples), samples_per_epoch_validation))
+    print("------------------------------------------------------------------------------------")
 
     checkpointer = ModelCheckpoint(filepath=os.path.join(os.path.split(__file__)[0], model_path),
                                    verbose=1, save_best_only=True)
@@ -60,8 +60,8 @@ def train(model_path='model.h5'):
 
     score = m.evaluate_generator(generate_valid(validation_samples, batch_size=batch_size, input_shape=input_shape),
                                  val_samples=samples_per_epoch_validation, pickle_safe=True)
-    print('Validation MSE:', score)
 
+    print('Validation MSE:', score)
     return m, history
 
 
@@ -71,4 +71,12 @@ if __name__ == '__main__':
                         help='Path to model definition h5 to be saved')
     args = parser.parse_args()
 
-    train(args.model)
+    model, history = train(args.model)
+
+    model_rep = model.to_json()
+
+    # Save data
+    with open('model.json', 'w') as f:
+        json.dump(model_rep, f)
+
+    model.save('./model_final.h5')

@@ -55,13 +55,13 @@ The data_io.py file contains the code for data input including: loading, normali
 My model consists of a convolution neural network inspired by the NVIDIA architecture described here, http://images.nvidia.com/content/tegra/automotive/images/2016/solutions/pdf/end-to-end-dl-using-px.pdf.
 It is an end-to-end model that have interspaced the layers in the NVIDIA design with Spatial Dropouts and a single Dropout (model.py lines 17-33)
 
-The model includes ReLU and ELU (Exponential Linear Unit) layers to introduce nonlinearity (see Final Model Architecture), and the data is normalized in the after loading using simple arithmetics in (data_io.py line 39). 
+The model includes ReLU and ELU (Exponential Linear Unit) layers to introduce nonlinearity (see Final Model Architecture), and the data is normalized in the after loading using simple arithmetics in (data_io.py line 47). 
 
 ####2. Attempts to reduce overfitting in the model
 
 The model interlaces spatial dropout layers in between each original NVIDIA layer order to reduce overfitting (model.py even lines 20-26) as well as a single dropout after the full-connected layers. 
 
-The model was trained and validated on different data sets to ensure that the model was not overfitting (model.py lines 37-65 and data_io.py lines 12-29). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
+The model was trained and validated on different data sets to ensure that the model was not overfitting (model.py lines 37-65 and data_io.py lines 11-39). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
 ####3. Model parameter tuning
 
@@ -93,7 +93,7 @@ At the end of the process, the vehicle is able to drive autonomously around the 
 
 ####2. Final Model Architecture
 
-The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes:
+The final model architecture (model.py lines 17-33) consisted of a convolution neural network with the following layers and layer sizes:
 From input to end:
 * 5x5 convolutional filter
 * SpatialDropout
@@ -133,7 +133,7 @@ To augment the traing data sat, I also flipped images and angles thinking that t
 ![alt text][image6]
 ![alt text][image7]
 
-To further augment the trainng data sat, I also used the left and right auxilliary camera images (data_io.py lines 76-104). 
+To further augment the trainng data sat, I also used the left and right auxilliary camera images (data_io.py lines 79-107). 
 
 For example, here is the center image along with it's left, right and their adjusted steering in a left turn:<br />
 Center:<br />
@@ -142,12 +142,12 @@ Left added with steering = center steering + _hard (0.15):<br />
 ![alt text][image9]<br />
 Right added steering = center steering + _soft (-0.025):<br />
 ![alt text][image10]<br />
-If the car was determined to be turning right instead augmented images would have mirrored parameters. I only augmented %40 of the training data and only when the absolute steering angle was larger than 0.2 (data_io.py line 171)
+If the car was determined to be turning right instead augmented images would have mirrored parameters. I only augmented 40% of the training data and only when the absolute steering angle was larger than 0.2 (data_io.py line 171)
 
-In addition I also filtered out 70% of images with large changes in steering control (data_io.py lines 46-65). Large changes is defined as a delta change in steering compared to previous which is greater than 0.5.
+In addition I also filtered out 70% of images with large changes in steering control (data_io.py lines 49-68). Large changes is defined as a delta change in steering compared to previous which is greater than 0.5.
 
-After the collection process, I added 5827 images to the sample data, totalling 13863 number of data points. I then preprocessed this data by simple arithmetics by "Normalization" (i.e. center around 0.5 and divide by 255)
+After the collection process, I added 1359 images to the sample data, totalling 10270 number of data points. I then preprocessed this data by simple arithmetics by "Normalization" (i.e. center around 0.5 and divide by 255)
 
-After initial loading I randomly shuffled the data set and put 30% of the data into a validation set (data_io.py line 109 and 140) leaving 70% for training. 
+After initial loading I randomly shuffled the data set and put 30% of the data into a validation set (data_io.py line 19) leaving 70% for training. 
 
 The training data with augmentation was used to train the model. The validation, composed only of original images, set helped determine if the model was over or under fitting. The ideal number of epochs was 10 as evidenced by inferior comparison of performance with a 25 epoch trained model. I used an Nadam optimizer so that manually training the learning rate wasn't necessary.

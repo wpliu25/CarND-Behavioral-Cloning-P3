@@ -2,12 +2,24 @@ import os
 import pandas as pd
 import numpy as np
 from scipy.misc import imread, imresize
-
+from sklearn.model_selection import train_test_split
+import sklearn
 
 DATA_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
-VALIDATION_COLUMN = 'valset'
 VALIDATION_RATIO = 0.3
 
+def get_data(batch_size):
+    # Load from file
+    data = load_dataset()
+
+    # Filter large delta in steering
+    data = filter_steering(data)
+
+    # Split data
+    train_samples, validation_samples = train_test_split(data, test_size=VALIDATION_RATIO)
+
+    ratio = 0.1
+    return train_samples, validation_samples, len(train_samples)*ratio, len(validation_samples)*ratio
 
 def load_dataset():
     log_file_original = os.path.join(DATA_PATH, 'driving_log.csv')
@@ -19,21 +31,12 @@ def load_dataset():
         original = pd.read_csv(log_file_original)
         centerDriving = pd.read_csv(log_file_centerDriving)
         recovery = pd.read_csv(log_file_recovery)
-        data = centerDriving.append(recovery, ignore_index=True)
+        data = original.append(recovery, ignore_index=True)
         n = len(data)
         print('\nDataset has {} samples'.format(n))
-        # Reserve ratio of data for validation
-        data[VALIDATION_COLUMN] = 1 * (np.random.rand(n) < VALIDATION_RATIO)
         data.to_csv(log_file_split, index=False)
 
     return data
-
-
-def count_data(batch_size):
-    data = load_dataset()
-    valid_size = np.sum(data[VALIDATION_COLUMN] == 1)*0.09
-    train_size = (int((len(data)-valid_size) * 0.1) // batch_size) * batch_size
-    return train_size, valid_size
 
 
 def load_image(file_path):
@@ -103,74 +106,63 @@ def add_side_image(x, y, steering, i, batch_size, img_left, img_right):
             i = add_image(x, y, img_left, steering + _hard, i, 1)
     return i
 
-def generate_valid(batch_size=64, input_shape=(160, 320, 3)):
-    # Load from file
-    data = load_dataset()
-
-    # Filter large delta in steering
-    data = filter_steering(data)
+def generate_valid(data, batch_size=64, input_shape=(160, 320, 3)):
 
     # Shuffle data
     data = data.reindex(np.random.permutation(data.index))
+    num_samples = len(data)
 
-    # Use validation data
-    data = data[data[VALIDATION_COLUMN] == 1]
+    for offset in range(0, num_samples, batch_size):
+        batch_samples = data[offset:offset + batch_size]
 
+        while 1:
+            x = np.zeros((batch_size, input_shape[0], input_shape[1], input_shape[2]))
+            y = np.zeros((batch_size, 1))
+            i = 0
 
-    while 1:
-        x = np.zeros((batch_size, input_shape[0], input_shape[1], input_shape[2]))
-        y = np.zeros((batch_size, 1))
-        i = 0
+            while i < batch_size:
+                idx = np.random.choice(batch_samples.index, 1, replace=False)[0]
+                img = load_image(batch_samples.loc[idx, 'center'])
+                steering = batch_samples.loc[idx, 'steering']
 
-        while i < batch_size:
-            idx = np.random.choice(data.index, 1, replace=False)[0]
-            img = load_image(data.loc[idx, 'center'])
-            steering = data.loc[idx, 'steering']
+                i = add_image(x, y, img, steering, i, 0)
+            yield sklearn.utils.shuffle(x, y)
 
-            i = add_image(x, y, img, steering, i, 0)
-        yield x, y
-
-def generate_train(batch_size=64, input_shape=(160, 320, 3)):
+def generate_train(data, batch_size=64, input_shape=(160, 320, 3)):
     #
     # Generate data with augmentation, filtering
     #
 
-    # Load from file
-    data = load_dataset()
-
-    # Filter large delta in steering
-    data = filter_steering(data)
-
     # Shuffle data
     data = data.reindex(np.random.permutation(data.index))
+    num_samples = len(data)
 
-    # Use training data, i.e. not validation
-    data = data[data[VALIDATION_COLUMN] == 0]
+    for offset in range(0, num_samples, batch_size):
+        batch_samples = data[offset:offset + batch_size]
 
+        while 1:
+            x = np.zeros((batch_size, input_shape[0], input_shape[1], input_shape[2]))
+            y = np.zeros((batch_size, 1))
+            i = 0
 
-    while 1:
-        x = np.zeros((batch_size, input_shape[0], input_shape[1], input_shape[2]))
-        y = np.zeros((batch_size, 1))
-        i = 0
+            while i < batch_size:
+                idx = np.random.choice(batch_samples.index, 1, replace=False)[0]
+                img = load_image(batch_samples.loc[idx, 'center'])
+                steering = batch_samples.loc[idx, 'steering']
 
-        while i < batch_size:
-            idx = np.random.choice(data.index, 1, replace=False)[0]
-            img = load_image(data.loc[idx, 'center'])
-            steering = data.loc[idx, 'steering']
+                i = add_image(x, y, img, steering, i, 0)
 
-            i = add_image(x, y, img, steering, i, 0)
+                if i < batch_size:
+                    # Horizontally flip the image
+                    i = add_image(x,y, img, steering, i, 1)
 
-            if i < batch_size:
-                # Horizontally flip the image
-                i = add_image(x,y, img, steering, i, 1)
+                # Augment with left and right image
+                #    with slight steering angle adjustment
+                #    with horizontally flipped image
+                random = np.random.randint(10)
+                if random < 8 and np.absolute(steering) > 0.20:
+                    img_left = load_image(batch_samples.loc[idx, 'left'])
+                    img_right = load_image(batch_samples.loc[idx, 'right'])
+                    i = add_side_image(x, y, steering, i, batch_size, img_left, img_right)
 
-            # Augment with left and right image
-            #    with slight steering angle adjustment
-            #    with horizontally flipped image
-            random = np.random.randint(10)
-            if random < 5 and np.absolute(steering) > 0.20:
-                img_left = load_image(data.loc[idx, 'left'])
-                img_right = load_image(data.loc[idx, 'right'])
-                i = add_side_image(x, y, steering, i, batch_size, img_left, img_right)
-
-        yield x, y
+            yield sklearn.utils.shuffle(x, y)

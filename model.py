@@ -6,7 +6,7 @@ from keras.layers import Dense, Convolution2D, Flatten, Dropout, SpatialDropout2
 from keras.models import Sequential
 from keras.optimizers import Nadam
 
-from data_io import generate_train, generate_valid, count_data
+from data_io import generate_train, generate_valid, get_data
 
 #
 #[Reference]: http://images.nvidia.com/content/tegra/automotive/images/2016/solutions/pdf/end-to-end-dl-using-px.pdf
@@ -35,7 +35,7 @@ def nvidia_dropout_model(input_shape=(80, 160, 3)):
     return model
 
 def train(model_path='model.h5'):
-    epochs = 10
+    epochs = 3
     batch_size = 64
     input_shape = (160, 320, 3)
 
@@ -44,22 +44,22 @@ def train(model_path='model.h5'):
     optimizer = Nadam()
     m.compile(loss='mean_squared_error', optimizer=optimizer, metrics=[])
 
-    cnts = count_data(batch_size)
-    print('Training size: {}, Validation size: {}'.format(*cnts))
+    train_samples, validation_samples, samples_per_epoch_training, samples_per_epoch_validation = get_data(batch_size)
+    print('Training size: %d, Validation size: %d'%(len(train_samples), len(validation_samples)))
     print("----------------------------------------------------")
 
     checkpointer = ModelCheckpoint(filepath=os.path.join(os.path.split(__file__)[0], model_path),
                                    verbose=1, save_best_only=True)
 
-    history = m.fit_generator(generate_train(batch_size=batch_size, input_shape=input_shape),
-                              samples_per_epoch=cnts[0], nb_epoch=epochs, verbose=1,
-                              validation_data=generate_valid(batch_size=batch_size,
+    history = m.fit_generator(generate_train(train_samples, batch_size=batch_size, input_shape=input_shape),
+                              samples_per_epoch=samples_per_epoch_training, nb_epoch=epochs, verbose=1,
+                              validation_data=generate_valid(validation_samples, batch_size=batch_size,
                                                              input_shape=input_shape),
-                              nb_val_samples=cnts[1], pickle_safe=True,
+                              nb_val_samples=samples_per_epoch_validation, pickle_safe=True,
                               callbacks=[checkpointer])
 
-    score = m.evaluate_generator(generate_valid(batch_size=batch_size, input_shape=input_shape),
-                                 val_samples=cnts[1], pickle_safe=True)
+    score = m.evaluate_generator(generate_valid(validation_samples, batch_size=batch_size, input_shape=input_shape),
+                                 val_samples=samples_per_epoch_validation, pickle_safe=True)
     print('Validation MSE:', score)
 
     return m, history

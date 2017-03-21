@@ -55,21 +55,21 @@ The data_io.py file contains the code for data input including: loading, normali
 My model consists of a convolution neural network inspired by the NVIDIA architecture described here, http://images.nvidia.com/content/tegra/automotive/images/2016/solutions/pdf/end-to-end-dl-using-px.pdf.
 It is an end-to-end model that have interspaced the layers in the NVIDIA design with Spatial Dropouts and a single Dropout (model.py lines 17-33)
 
-The model includes ReLU and ELU (Exponential Linear Unit) layers to introduce nonlinearity (see Final Model Architecture), and the data is normalized in the after loading using simple arithmetics in (data_io.py line 47). 
+The model includes ReLU and ELU (Exponential Linear Unit) layers to introduce nonlinearity (see Final Model Architecture), and the data is normalized in after cropping (model.py lines 19-23) 
 
 ####2. Attempts to reduce overfitting in the model
 
-The model interlaces spatial dropout layers in between each original NVIDIA layer order to reduce overfitting (model.py even lines 20-26) as well as a single dropout after the full-connected layers. 
+The model interlaces spatial dropout layers in between each original NVIDIA layer order to reduce overfitting (model.py odd lines 25-31) as well as a single dropout after the full-connected layers. 
 
-The model was trained and validated on different data sets to ensure that the model was not overfitting (model.py lines 37-65 and data_io.py lines 11-39). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
+The model was trained and validated on different data sets to ensure that the model was not overfitting (model.py lines 52 and data_io.py lines 11-18). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
 ####3. Model parameter tuning
 
-The model used an Nadam optimizer, so the learning rate was not tuned manually (model.py line 44).
+The model used an adam optimizer, so the learning rate was not tuned manually (model.py line 44).
 
 ####4. Appropriate training data
 
-Training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road, horizontally flipping images and filtering out sequential large changes in driving angles to deduce jitter.
+Training data was chosen to keep the vehicle driving on the road. I used a combination of 3 laps of center lane driving, recovering from the left and right sides of the road and the original sample data. This datasest was augmented to 6x by adding left and right images and horizontally flipping these plus the original.
 
 For details about how I created the training data, see the next section. 
 
@@ -81,7 +81,7 @@ The overall strategy for deriving a model architecture was to ...
 
 My first step was to use a convolution neural network model similar to the one used by NVIDIA for Dave-2. I thought this model might be appropriate because several project notes (introduction as a more powerful network in the project prep material) and vetted recommendations by previous student's blog, https://carnd-forums.udacity.com/cq/viewquestion.action?id=26214464&questionTitle=behavioral-cloning-cheatsheet all recommend this as as starting point. 
 
-In order to gauge how well the model was working, I split my image and steering angle data into a training (70%) and validation set (30%) using a variable VALIDAION_RATIO (data_io.py line 9). I found that my first model had a low mean squared error on the training set but a high mean squared error on the validation set. Also in 10 epochs loss sporadically improved only 3-4 rounds (1-2 epochs at the beginning and at a random later epoch)  This implied that the model was overfitting.
+In order to gauge how well the model was working, I split my image and steering angle data into a training (70%) and validation set (30%) using a variable VALIDAION_RATIO (data_io.py line 9, 16). I found that my first model had a low mean squared error on the training set but a high mean squared error on the validation set. Also in 5 epochs loss sporadically improved only 3-4 rounds (1-2 epochs at the beginning and at a random later epoch)  This implied that the model was overfitting.
 
 To combat the overfitting, I modified the model so I tried adding dropout layers using eithr ReLU or ELU. ELU is theoretically  superior due to its solution to the Vanishing gradient problem . However, in practice I found ReLU to work well in the convolutional layers while fully-connected layers behaviorally seemed to learn faster with ELU.
 
@@ -133,21 +133,16 @@ To augment the traing data sat, I also flipped images and angles thinking that t
 ![alt text][image6]
 ![alt text][image7]
 
-To further augment the trainng data sat, I also used the left and right auxilliary camera images (data_io.py lines 79-107). 
+To further augment the trainng data sat, I also added the left and right auxilliary camera images with 0.5 correction (data_io.py lines 79, 50-58). 
 
-For example, here is the center image along with it's left, right and their adjusted steering in a left turn:<br />
+For example, here is the center image along with it's left, right:<br />
 Center:<br />
 ![alt text][image8]<br />
-Left added with steering = center steering + _hard (0.15):<br />
 ![alt text][image9]<br />
-Right added steering = center steering + _soft (-0.025):<br />
 ![alt text][image10]<br />
-If the car was determined to be turning right instead augmented images would have mirrored parameters. I only augmented 40% of the training data and only when the absolute steering angle was larger than 0.2 (data_io.py line 171)
 
-In addition I also filtered out 70% of images with large changes in steering control (data_io.py lines 49-68). Large changes is defined as a delta change in steering compared to previous which is greater than 0.5.
+After the center lane driving collection process, I added 1359 images of recovery from the lane to the sample data, totalling 13,863 number of data points. This dataset is augmented 6 fold, cropped by 50 rows from the top, 20 from the bottom.
 
-After the collection process, I added 1359 images to the sample data, totalling 10270 number of data points. I then preprocessed this data by simple arithmetics by "Normalization" (i.e. center around 0.5 and divide by 255)
+After initial loading I put 30% of the data into a validation set (data_io.py line 16) leaving 70% for training all of which was shuffled in the generator. 
 
-After initial loading I randomly shuffled the data set and put 30% of the data into a validation set (data_io.py line 19) leaving 70% for training. 
-
-The training data with augmentation was used to train the model. The validation, composed only of original images, set helped determine if the model was over or under fitting. The ideal number of epochs was 10 as evidenced by inferior comparison of performance with a 25 epoch trained model. I used an Nadam optimizer so that manually training the learning rate wasn't necessary.
+The training data, with augmentation, was used to train the model. The validation data, with augmentetation, helped determine if the model was over or under fitting. The ideal number of epochs was 5 as evidenced by similar performance with a 10 epoch trained model. I used an adam optimizer so that manually training the learning rate wasn't necessary.

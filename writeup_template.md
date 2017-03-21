@@ -46,7 +46,7 @@ python drive.py model.h5
 ####3. Submission code is usable and readable
 
 The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
-The data_io.py file contains the code for data input including: loading, normalization, augmentation, and generation of training and validation data sets.
+The data_io.py file contains the code for data input including: loading, augmentation, and generation of training and validation data sets.
 
 ###Model Architecture and Training Strategy
 
@@ -138,7 +138,9 @@ To further augment the trainng data sat, I also added the left and right auxilli
 For example, here is the center image along with it's left, right:<br />
 Center:<br />
 ![alt text][image8]<br />
+Left:<br />
 ![alt text][image9]<br />
+Right:<br />
 ![alt text][image10]<br />
 
 After the center lane driving collection process, I added 1359 images of recovery from the lane to the sample data, totalling 13,863 number of data points. This dataset is augmented 6 fold, cropped by 50 rows from the top, 20 from the bottom.

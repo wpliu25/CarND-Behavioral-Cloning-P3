@@ -2,11 +2,11 @@ import argparse
 import os, json
 
 from keras.callbacks import ModelCheckpoint
-from keras.layers import Dense, Conv2D, Flatten, Dropout, SpatialDropout2D, Cropping2D, Convolution2D
+from keras.layers import Dense, Conv2D, Flatten, Dropout, SpatialDropout2D, Cropping2D, Convolution2D, Lambda
 from keras.models import Sequential
-from keras.optimizers import Nadam
+from keras.optimizers import Nadam, adam
 
-from data_io import generate_train, generate_valid, get_data
+from data_io import generator, get_data
 
 #
 #[Reference]: http://images.nvidia.com/content/tegra/automotive/images/2016/solutions/pdf/end-to-end-dl-using-px.pdf
@@ -14,17 +14,22 @@ from data_io import generate_train, generate_valid, get_data
 
 def nvidia_dropout_model(input_shape=(80, 160, 3)):
 
+    ch, row, col = 3, 80, 320  # Trimmed image format
     model = Sequential()
-    model.add(Cropping2D(cropping=((50, 20), (0, 0)), input_shape=input_shape))
-    model.add(Convolution2D(24, 5, 5,subsample=(2,2), activation="relu"))
+    model.add(Cropping2D(cropping=((50, 30), (0, 0)), input_shape=input_shape))
+    # Preprocess incoming data, centered around zero with small standard deviation
+    model.add(Lambda(lambda x: x / 127.5 - 1.,
+                     input_shape=(row, col, ch),
+                     output_shape=(row, col, ch)))
+    model.add(Convolution2D(24, 5, 5,subsample=(2,2), activation="relu", border_mode='same'))
     model.add(SpatialDropout2D(0.2))
-    model.add(Convolution2D(36, 5, 5, subsample=(2, 2), activation="relu"))
+    model.add(Convolution2D(36, 5, 5, subsample=(2, 2), activation="relu", border_mode='same'))
     model.add(SpatialDropout2D(0.2))
-    model.add(Convolution2D(48, 5, 5, subsample=(2, 2), activation="relu"))
+    model.add(Convolution2D(48, 5, 5, subsample=(2, 2), activation="relu", border_mode='same'))
     model.add(SpatialDropout2D(0.2))
-    model.add(Convolution2D(64, 3, 3, subsample=(2, 2), activation="relu"))
+    model.add(Convolution2D(64, 3, 3, subsample=(2, 2), activation="relu", border_mode='same'))
     model.add(SpatialDropout2D(0.2))
-    model.add(Convolution2D(64, 3, 3, subsample=(2, 2), activation="relu"))
+    model.add(Convolution2D(64, 3, 3, subsample=(2, 2), activation="relu", border_mode='same'))
     model.add(Flatten())
     model.add(Dense(100, activation="elu"))
     model.add(Dense(50, activation="elu"))
@@ -45,20 +50,23 @@ def train(model_path='model.h5'):
     m.compile(loss='mean_squared_error', optimizer=optimizer, metrics=[])
 
     train_samples, validation_samples, samples_per_epoch_training, samples_per_epoch_validation = get_data(batch_size, epochs)
-    print('Training size: %d batches per epoch: %d, Validation size: %d batches per epoch: %d'%(len(train_samples), samples_per_epoch_training, len(validation_samples), samples_per_epoch_validation))
+    print('Training size: %d samples per epoch: %d, Validation size: %d samples per epoch: %d'%(len(train_samples), samples_per_epoch_training, len(validation_samples), samples_per_epoch_validation))
     print("------------------------------------------------------------------------------------")
 
     checkpointer = ModelCheckpoint(filepath=os.path.join(os.path.split(__file__)[0], model_path),
                                    verbose=1, save_best_only=True)
 
-    history = m.fit_generator(generate_train(train_samples, batch_size=batch_size, input_shape=input_shape),
+    train_generator = generator(train_samples, batch_size=batch_size, input_shape=input_shape)
+    validation_generator = generator(validation_samples, batch_size=batch_size,
+                                                             input_shape=input_shape)
+
+    history = m.fit_generator(train_generator,
                               samples_per_epoch=samples_per_epoch_training, nb_epoch=epochs, verbose=1,
-                              validation_data=generate_valid(validation_samples, batch_size=batch_size,
-                                                             input_shape=input_shape),
+                              validation_data=validation_generator,
                               nb_val_samples=samples_per_epoch_validation, pickle_safe=True,
                               callbacks=[checkpointer])
 
-    score = m.evaluate_generator(generate_valid(validation_samples, batch_size=batch_size, input_shape=input_shape),
+    score = m.evaluate_generator(validation_generator,
                                  val_samples=samples_per_epoch_validation, pickle_safe=True)
 
     print('Validation MSE:', score)
@@ -79,4 +87,4 @@ if __name__ == '__main__':
     with open('model.json', 'w') as f:
         json.dump(model_rep, f)
 
-    model.save('./model_final.h5')
+    model.save('./'+args.model+'_final.h5')

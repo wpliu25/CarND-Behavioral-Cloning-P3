@@ -12,18 +12,14 @@ def get_data(batch_size, epochs):
     # Load from file
     data = load_dataset()
 
-    # Filter large delta in steering
-    data = filter_steering(data)
-
     # Split data
     train_samples, validation_samples = train_test_split(data, test_size=VALIDATION_RATIO)
 
-    ratio = 0.1
-    return train_samples, validation_samples, (len(train_samples)*2+len(train_samples)*4*0.9), len(validation_samples)#/batch_size, len(validation_samples)/epochs
+    return train_samples, validation_samples, (len(train_samples)*6), len(validation_samples)*6
 
 def load_dataset():
     log_file_original = os.path.join(DATA_PATH, 'driving_log.csv')
-    log_file_centerDriving = os.path.join(DATA_PATH,'centerDriving','driving_log.csv')
+    log_file_centerDriving = os.path.join(DATA_PATH,'centerDrivingLong','driving_log.csv')
     log_file_recovery = os.path.join(DATA_PATH, 'recoveryLong', 'driving_log.csv')
     log_file_split = os.path.join(DATA_PATH, 'driving_log_split.csv')
 
@@ -41,128 +37,47 @@ def load_dataset():
 
 def load_image(file_path):
     img = imread(os.path.join(DATA_PATH, file_path.strip()))
-    # Crop to 80, 160 - replaced with Keras.Cropping2D
-    #img = imresize(img, (80, 160, 3))
-    #Normalize
-    return (img / 255.0-0.5)
+    return img
 
-def filter_steering(data, percentage=8, threshold = 0.5):
-    #
-    # Filtering % steering angles with delta above threshold
-    #    default is 70% of all angles greater than 0.5
-    #
-    rows = []
-    delta = 0
-    previousSteering = data.loc[0, 'steering']
-    ind = data.index.tolist()
-    for i in ind:
-        if i > 0:
-            delta = np.absolute(previousSteering - data.loc[i, 'steering'])
-        random = np.random.randint(10)
-        if (delta > threshold) and (random < percentage):
-            rows.append(i)
-
-    data = data.drop(data.index[rows])
-    print("Filtered {} rows with large delta steering".format(len(rows)))
-
-    return data
-
-def add_image(x, y, img, steering, i, flip=0):
+def append_image(x, y, img, steering, flip=0):
     if flip == 1:
-        x[i, :, :, :] = np.fliplr(img)
-        y[i, 0] = -steering
-    else:
-        x[i, :, :, :] = img
-        y[i, 0] = steering
-    return i + 1
+        img = np.fliplr(img)
+        steering = -steering
 
-def add_side_image(x, y, steering, i, batch_size, img_left, img_right):
-    # Augment with slight increase and decrease for left and right image
-    #   hard increase opposite direction camera
-    #   soft decrease current direction camera
+    x.append(img)
+    y.append(steering)
+
+def append_side_image(x, y, steering, img_left, img_right):
+    # Augment with left and right image
     #   add flip
-    _hard = 0.15
-    _soft = -0.025
+    _correction = 0.5
 
-    # left turn
-    if steering < 0:
-        if i < batch_size:
-            i = add_image(x, y, img_left, steering + _soft, i)
-        if i < batch_size:
-            i = add_image(x, y, img_left, steering + _soft, i, 1)
-        if i < batch_size:
-            i = add_image(x, y, img_right, steering + _hard, i)
-        if i < batch_size:
-            i = add_image(x, y, img_right, steering + _hard, i, 1)
-    # right turn
-    else:
-        if i < batch_size:
-            i = add_image(x, y, img_right, steering + _soft, i)
-        if i < batch_size:
-            i = add_image(x, y, img_right, steering + _soft, i, 1)
-        if i < batch_size:
-            i = add_image(x, y, img_left, steering + _hard, i)
-        if i < batch_size:
-            i = add_image(x, y, img_left, steering + _hard, i, 1)
-    return i
+    append_image(x, y, img_left, steering + _correction, 0)
+    append_image(x, y, img_left, steering + _correction, 1)
+    append_image(x, y, img_right, steering - _correction, 0)
+    append_image(x, y, img_right, steering - _correction, 1)
 
-def generate_valid(data, batch_size=64, input_shape=(160, 320, 3)):
+def generator(samples, batch_size=64, input_shape=(160, 320, 3)):
 
-    # Shuffle data
-    data = data.reindex(np.random.permutation(data.index))
-    num_samples = len(data)
+    num_samples = len(samples)
+    while 1: # Loop forever so the generator never terminates
+        # Shuffle data
+        samples.reindex(np.random.permutation(samples.index))
+        for offset in range(0, num_samples, batch_size):
+            batch_samples = samples[offset:offset+batch_size]
 
-    for offset in range(0, num_samples, batch_size):
-        batch_samples = data[offset:offset + batch_size]
+            images = []
+            angles = []
+            for idx in batch_samples.index:
+                center_image = load_image(batch_samples.loc[idx, 'center'])
+                center_angle = batch_samples.loc[idx, 'steering']
+                append_image(images, angles, center_image, center_angle, 0)
+                append_image(images, angles, center_image, center_angle, 1)
 
-        while 1:
-            x = np.zeros((batch_size, input_shape[0], input_shape[1], input_shape[2]))
-            y = np.zeros((batch_size, 1))
-            i = 0
+                img_left = load_image(batch_samples.loc[idx, 'left'])
+                img_right = load_image(batch_samples.loc[idx, 'right'])
+                append_side_image(images, angles, center_angle, img_left, img_right)
 
-            while i < batch_size:
-                idx = np.random.choice(batch_samples.index, 1, replace=False)[0]
-                img = load_image(batch_samples.loc[idx, 'center'])
-                steering = batch_samples.loc[idx, 'steering']
-
-                i = add_image(x, y, img, steering, i, 0)
-            yield sklearn.utils.shuffle(x, y)
-
-def generate_train(data, batch_size=64, input_shape=(160, 320, 3)):
-    #
-    # Generate data with augmentation, filtering
-    #
-
-    # Shuffle data
-    data = data.reindex(np.random.permutation(data.index))
-    num_samples = len(data)
-
-    for offset in range(0, num_samples, batch_size):
-        batch_samples = data[offset:offset + batch_size]
-
-        while 1:
-            x = np.zeros((batch_size, input_shape[0], input_shape[1], input_shape[2]))
-            y = np.zeros((batch_size, 1))
-            i = 0
-
-            while i < batch_size:
-                idx = np.random.choice(batch_samples.index, 1, replace=False)[0]
-                img = load_image(batch_samples.loc[idx, 'center'])
-                steering = batch_samples.loc[idx, 'steering']
-
-                i = add_image(x, y, img, steering, i, 0)
-
-                if i < batch_size:
-                    # Horizontally flip the image
-                    i = add_image(x,y, img, steering, i, 1)
-
-                # Augment with left and right image
-                #    with slight steering angle adjustment
-                #    with horizontally flipped image
-                random = np.random.randint(10)
-                if random < 9 and np.absolute(steering) > 0.20:
-                    img_left = load_image(batch_samples.loc[idx, 'left'])
-                    img_right = load_image(batch_samples.loc[idx, 'right'])
-                    i = add_side_image(x, y, steering, i, batch_size, img_left, img_right)
-
-            yield sklearn.utils.shuffle(x, y)
+            X_train = np.array(images)
+            y_train = np.array(angles)
+            yield sklearn.utils.shuffle(X_train, y_train)

@@ -53,9 +53,9 @@ def append_side_image(x, y, steering, img_left, img_right):
     _correction = 0.5
 
     append_image(x, y, img_left, steering + _correction, 0)
-    append_image(x, y, img_left, steering + _correction, 1)
+    append_image(x, y, img_left, steering - _correction, 1)
     append_image(x, y, img_right, steering - _correction, 0)
-    append_image(x, y, img_right, steering - _correction, 1)
+    append_image(x, y, img_right, steering + _correction, 1)
 
 def generator(samples, batch_size=64, input_shape=(160, 320, 3)):
 
